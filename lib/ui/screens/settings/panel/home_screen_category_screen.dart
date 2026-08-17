@@ -17,6 +17,15 @@ class _HomeScreenCategoryScreenState extends State<_HomeScreenCategoryScreen> {
         HomeRowsStyle.v2 => l10n.homeRowsStyleModern,
       };
 
+  String _mediaTypeBadgeBehaviorLabel(
+    AppLocalizations l10n,
+    MediaTypeBadgeBehavior behavior,
+  ) => switch (behavior) {
+    MediaTypeBadgeBehavior.always => l10n.always,
+    MediaTypeBadgeBehavior.mixedRowsOnly => 'Mixed rows only',
+    MediaTypeBadgeBehavior.never => l10n.never,
+  };
+
   void _reloadHomeRows() {
     if (!GetIt.instance.isRegistered<HomeViewModel>()) return;
     GetIt.instance<HomeViewModel>().load(preserveExisting: true);
@@ -107,6 +116,19 @@ class _HomeScreenCategoryScreenState extends State<_HomeScreenCategoryScreen> {
                   icon: Icons.info_outline,
                   onChanged: () {
                     _pushPersonalizationSync();
+                    if (!mounted) return;
+                    setState(() {});
+                  },
+                ),
+              if (!PlatformDetection.useMobileUi)
+                EnumPreferenceTile<MediaTypeBadgeBehavior>(
+                  preference: MediaTypeBadgePreferences.behavior,
+                  title: 'Media type badges',
+                  description: 'Show MOVIE / SERIES labels on home-row cards',
+                  icon: Icons.label_outline,
+                  labelOf: (behavior) =>
+                      _mediaTypeBadgeBehaviorLabel(l10n, behavior),
+                  onChanged: () {
                     if (!mounted) return;
                     setState(() {});
                   },
