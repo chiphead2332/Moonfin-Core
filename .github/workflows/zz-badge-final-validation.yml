@@ -1,0 +1,90 @@
+name: Validate badge PR
+
+on:
+  push:
+    branches:
+      - validation/media-type-badge-visibility
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Fetch base
+        run: git fetch origin main
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Check new Dart file formatting
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            lib/preference/media_type_badge_preferences.dart
+
+      - name: Check diff whitespace
+        run: git diff --check origin/main...HEAD
+
+      - name: Analyze head
+        run: |
+          set +e
+          flutter analyze --machine --no-pub lib > /tmp/head-analyze.txt
+          rc=$?
+          set -e
+          echo "head analyzer exit: $rc"
+
+      - name: Analyze base
+        run: |
+          git worktree add /tmp/moonfin-base origin/main
+          cd /tmp/moonfin-base
+          flutter pub get
+          set +e
+          flutter analyze --machine --no-pub lib > /tmp/base-analyze.txt
+          rc=$?
+          set -e
+          echo "base analyzer exit: $rc"
+
+      - name: Verify no new analyzer warnings or errors
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def parse(path):
+              out = set()
+              for raw in Path(path).read_text(errors='replace').splitlines():
+                  parts = raw.split('|')
+                  if len(parts) < 8 or parts[0] not in {'WARNING', 'ERROR'}:
+                      continue
+                  severity, kind, code, file = parts[:4]
+                  message = parts[7]
+                  marker = '/lib/'
+                  rel = 'lib/' + file.split(marker, 1)[1] if marker in file else file
+                  out.add((severity, code, rel, message))
+              return out
+
+          base = parse('/tmp/base-analyze.txt')
+          head = parse('/tmp/head-analyze.txt')
+          new = sorted(head - base)
+          if new:
+              print('New analyzer warnings/errors:')
+              for row in new:
+                  print(' | '.join(row))
+              raise SystemExit(1)
+          print(f'No new analyzer warnings/errors. base={len(base)} head={len(head)}')
+          PY
+
+      - name: Build Web release
+        run: flutter build web --release --no-pub
