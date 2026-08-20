@@ -1,0 +1,31 @@
+name: Manual Moonfin Web Build
+
+on:
+  push:
+    branches:
+      - ci/manual-web-build-idn
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Build plugin web bundle
+        run: flutter build web --wasm --release --base-href "/Moonfin/Web/"
+      - name: Upload web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: moonfin-web-idn-manual-test
+          path: build/web/
+          if-no-files-found: error
