@@ -26,35 +26,6 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Format changed files
-        run: |
-          dart format \
-            lib/auth/models/server.dart \
-            lib/auth/repositories/server_repository.dart \
-            lib/auth/repositories/server_user_repository.dart \
-            lib/util/server_url.dart \
-            test/server_model_test.dart \
-            test/util/server_url_test.dart
-          if ! git diff --quiet -- \
-            lib/auth/models/server.dart \
-            lib/auth/repositories/server_repository.dart \
-            lib/auth/repositories/server_user_repository.dart \
-            lib/util/server_url.dart \
-            test/server_model_test.dart \
-            test/util/server_url_test.dart; then
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add \
-              lib/auth/models/server.dart \
-              lib/auth/repositories/server_repository.dart \
-              lib/auth/repositories/server_user_repository.dart \
-              lib/util/server_url.dart \
-              test/server_model_test.dart \
-              test/util/server_url_test.dart
-            git commit -m "Format IDN display-address changes"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
-
       - name: Verify formatting
         run: |
           dart format --output=none --set-exit-if-changed \
@@ -65,8 +36,15 @@ jobs:
             test/server_model_test.dart \
             test/util/server_url_test.dart
 
-      - name: Analyze
-        run: flutter analyze
+      - name: Analyze changed files
+        run: |
+          dart analyze \
+            lib/auth/models/server.dart \
+            lib/auth/repositories/server_repository.dart \
+            lib/auth/repositories/server_user_repository.dart \
+            lib/util/server_url.dart \
+            test/server_model_test.dart \
+            test/util/server_url_test.dart
 
       - name: Run IDN tests
         run: flutter test test/util/server_url_test.dart test/server_model_test.dart
